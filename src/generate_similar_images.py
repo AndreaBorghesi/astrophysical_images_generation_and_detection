@@ -42,7 +42,7 @@ from keras.datasets import mnist
 import cv2
 
 _batch_size = 32
-_epochs = 10
+_epochs = 100
 
 base_dir = '/home/b0rgh/collaborations_potential/'
 base_dir += 'mpasquato_AE_detection_astrophysics_images/'
@@ -52,14 +52,14 @@ img_dir_valid = base_dir + 'images_set_validation_small/'
 img_dir_test = base_dir + 'images_set_test/'
 #img_dir_train_small = base_dir + 'images_set_very_small/'
 #img_dir_valid = base_dir + 'images_set_validation_very_small/'
-img_dir_train = img_dir_train_small
+#img_dir_train = img_dir_train_small
 
 # TODO: make experiments with data augmentation for training set
 # https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html
 
 #img_target_size = 204
 img_target_size = 100
-#img_target_size = 28
+img_target_size = 28
 #img_target_size = 996
 
 # load training images
@@ -131,6 +131,12 @@ def AE_CNN():
     if img_target_size >= 100:
         x = Conv2D(16, (3, 3), activation='relu')(x)
         x = UpSampling2D((2, 2))(x)
+    if img_target_size == 28:
+        x = Conv2D(16, (3, 3), activation='relu')(x)
+        x = UpSampling2D((3, 3))(x)
+        x = Conv2D(16, (3, 3), activation='relu')(x)
+        #x = UpSampling2D((2, 2))(x)
+
     #decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same')(x)
     decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
 
@@ -154,7 +160,7 @@ checkpoint_cnn = ModelCheckpoint(filepath = "model_weights_ae_cnn.h5",
 history_cnn = History()
 autoencoder_cnn = AE_CNN()
 autoencoder_cnn.summary()
-autoencoder_cnn.compile(optimizer='adadelta', loss='binary_crossentropy')
+autoencoder_cnn.compile(optimizer='adam', loss='binary_crossentropy')
 #autoencoder_cnn.compile(optimizer='adadelta', loss='mse')
 #autoencoder_cnn.fit_generator(fixed_generator(train_generator_cnn),
 #        samples_per_epoch=math.floor(41322 / _batch_size), nb_epoch=_epochs,
@@ -163,7 +169,7 @@ autoencoder_cnn.compile(optimizer='adadelta', loss='binary_crossentropy')
 #        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
 
 #autoencoder = Model(input_img, decoded)
-autoencoder_cnn.compile(optimizer='adam', loss='mse')
+#autoencoder_cnn.compile(optimizer='adam', loss='mse')
 #autoencoder.fit(x, x, epochs=_epochs, batch_size=_batch_size, callbacks=None )
 
 autoencoder_cnn.fit(x_train, x_train, epochs=_epochs, batch_size=_batch_size,
@@ -190,7 +196,7 @@ for i in range(n):
     #        (img_target_size, img_target_size))
     #plt.imshow(reshaped_dec_img)
     plt.imshow(decoded_imgs[i])
-    #plt.gray()
+    plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
