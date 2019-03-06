@@ -40,6 +40,7 @@ from keras.callbacks import ModelCheckpoint, History
 from tqdm import tqdm
 from keras.datasets import mnist
 import cv2
+from PIL import Image
 
 _batch_size = 32
 _epochs = 100
@@ -60,34 +61,67 @@ img_dir_test = base_dir + 'images_set_test/'
 #img_target_size = 204
 img_target_size = 100
 img_target_size = 28
-#img_target_size = 996
+img_target_size = 996
+
+enhanced_contrast = 0
+#enhanced_contrast = -10
+
+def change_contrast(img, level):
+    factor = (259 * (level + 255)) / (255 * (259 - level))
+    def contrast(c):
+        value = 128 + factor * (c - 128)
+        return max(0, min(255, value))
+    return img.point(contrast)
+
+def change_contrast_multi(img, steps):
+    width, height = img.size
+    canvas = Image.new('RGB', (width * len(steps), height))
+    for n, level in enumerate(steps):
+        img_filtered = change_contrast(img, level)
+        canvas.paste(img_filtered, (width * n, 0))
+    return canvas
 
 # load training images
 train_images = []
 for i in tqdm(os.listdir(img_dir_train)):
     img_path = os.path.join(img_dir_train, i)
-    img = image.img_to_array(image.load_img(img_path,
-        target_size=(img_target_size, img_target_size)))
-    #img = cv2.imread(img_path, 0)
+    if enhanced_contrast != 0:
+        img_enhanced = change_contrast_multi(Image.open(img_path),
+                [enhanced_contrast])
+        img = image.img_to_array(img_enhanced)
+    else:
+        img = image.img_to_array(image.load_img(img_path,
+            target_size=(img_target_size, img_target_size)))
     train_images.append(img)
 x_train = np.asarray(train_images)
 
-validation_images = []
-for i in tqdm(os.listdir(img_dir_valid)):
-    img_path = os.path.join(img_dir_valid, i)
-    img = image.img_to_array(image.load_img(img_path,
-        target_size=(img_target_size, img_target_size)))
-    validation_images.append(img)
-x_validation = np.asarray(validation_images)
+#validation_images = []
+#for i in tqdm(os.listdir(img_dir_valid)):
+#    img_path = os.path.join(img_dir_valid, i)
+#    img = image.img_to_array(image.load_img(img_path,
+#        target_size=(img_target_size, img_target_size)))
+#    validation_images.append(img)
+#x_validation = np.asarray(validation_images)
 
 test_images = []
 for i in tqdm(os.listdir(img_dir_test)):
     img_path = os.path.join(img_dir_test, i)
-    img = image.img_to_array(image.load_img(img_path,
-        target_size=(img_target_size, img_target_size)))
+    if enhanced_contrast != 0:
+        img_enhanced = change_contrast_multi(Image.open(img_path),
+                [enhanced_contrast])
+        img = image.img_to_array(img_enhanced)
+    else:
+        img = image.img_to_array(image.load_img(img_path,
+            target_size=(img_target_size, img_target_size)))
     test_images.append(img)
 x_test = np.asarray(test_images)
 
+#imgs = change_contrast_multi(Image.open(
+#    img_dir_test + 'z_add_pow-3.0882_seed57212.png'), 
+#        [-100, 0, -10, -25, -50])
+#plt.imshow(imgs)
+#plt.show()
+#sys.exit()
 
 #(x_train, _), (x_test, _) = mnist.load_data()
 x_train = x_train.astype('float32') / 255.
