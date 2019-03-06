@@ -62,6 +62,7 @@ img_dir_test = base_dir + 'images_set_test/'
 img_target_size = 100
 img_target_size = 28
 img_target_size = 996
+#img_target_size = 244
 
 enhanced_contrast = 0
 #enhanced_contrast = -10
@@ -83,7 +84,10 @@ def change_contrast_multi(img, steps):
 
 # load training images
 train_images = []
+idx = 0
 for i in tqdm(os.listdir(img_dir_train)):
+    if idx == 30:
+        break
     img_path = os.path.join(img_dir_train, i)
     if enhanced_contrast != 0:
         img_enhanced = change_contrast_multi(Image.open(img_path),
@@ -93,7 +97,11 @@ for i in tqdm(os.listdir(img_dir_train)):
         img = image.img_to_array(image.load_img(img_path,
             target_size=(img_target_size, img_target_size)))
     train_images.append(img)
+    idx += 1
 x_train = np.asarray(train_images)
+
+print(x_train.nbytes)
+sys.exit()
 
 #validation_images = []
 #for i in tqdm(os.listdir(img_dir_valid)):
@@ -137,6 +145,7 @@ x_test = x_test.astype('float32') / 255.
 #x_test = np.reshape(x_test, (len(x_test), img_target_size, img_target_size, 1))
 #print(x_train.shape)
 #print(x_test.shape)
+# train_datagen = ImageDataGenerator(rescale=1./255)
 
 ##
 ##outfile = 'imgs_as_np_array_file.npy'
