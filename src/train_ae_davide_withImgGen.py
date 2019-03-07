@@ -1,9 +1,10 @@
 '''
 Andrea Borghesi
 University of Bologna
-    2019-03-02
+    2019-03-06
 
 Script to train the NN using DAVIDE 
+- use a image generator to load the train/test set
 '''
 
 #!/usr/bin/python
@@ -12,12 +13,8 @@ import numpy as np
 import sys
 import os
 import subprocess
-#import pickle
-#from pathlib import Path
 import math
 import time
-import pandas as pd 
-#from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 import tensorflow as tf
 from keras.models import load_model, Sequential, Model
 from keras import backend as K 
@@ -31,58 +28,70 @@ from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
 from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing import image
 from keras.callbacks import ModelCheckpoint, History
+from PIL import Image
 
 _batch_size = 32
-_epochs = 10
+_epochs = 100
 
 base_dir = '/davide/home/userexternal/aborghes/'
 base_dir += 'astrophysical_images_generation_and_detection/'
-img_dir_train = base_dir + 'images_set/'
-img_dir_train_small = base_dir + 'images_set_small/'
-img_dir_valid = base_dir + 'images_set_validation_small/'
-img_dir_test = base_dir + 'images_set_test/'
-#img_dir_train_small = base_dir + 'images_set_very_small/'
-#img_dir_valid = base_dir + 'images_set_validation_very_small/'
-#img_dir_train = img_dir_train_small
 trained_models_dir = base_dir + 'trained_models/'
+img_dir_train = base_dir + 'img_generator/train/'
+img_dir_validation = base_dir + 'img_generator/validation/'
+img_dir_test = base_dir + 'img_generator/test/'
 
 #img_target_size = 204
 #img_target_size = 100
 #img_target_size = 28
 img_target_size = 996
-img_target_size = 244
-
-before_load_time = time.time()
-# load training images
-train_images = []
-for filename in os.listdir(img_dir_train):
-    if not filename.endswith('.png'):
-        continue
-    img_path = '{}{}'.format(img_dir_train, filename)
-    img = image.img_to_array(image.load_img(img_path,
-        target_size=(img_target_size, img_target_size)))
-    #img = cv2.imread(img_path, 0)
-    train_images.append(img)
-x_train = np.asarray(train_images)
-
-test_images = []
-for filename in os.listdir(img_dir_test):
-    if not filename.endswith('.png'):
-        continue
-    img_path = '{}{}'.format(img_dir_test, filename)
-    img = image.img_to_array(image.load_img(img_path,
-        target_size=(img_target_size, img_target_size)))
-    test_images.append(img)
-x_test = np.asarray(test_images)
-
-x_train = x_train.astype('float32') / 255.
-x_test = x_test.astype('float32') / 255.
-
-after_load_time = time.time()
-load_time = after_load_time - before_load_time
-print("Train & Test sets loaded (in {} s)".format(load_time))
+#img_target_size = 244
+img_width, img_height = img_target_size, img_target_size
 
 img_width, img_height = img_target_size, img_target_size
+nb_channels = 3
+
+enhanced_contrast = 0
+#enhanced_contrast = -10
+
+def change_contrast(img, level):
+    factor = (259 * (level + 255)) / (255 * (259 - level))
+    def contrast(c):
+        value = 128 + factor * (c - 128)
+        return max(0, min(255, value))
+    return img.point(contrast)
+
+def change_contrast_multi(img, steps):
+    width, height = img.size
+    canvas = Image.new('RGB', (width * len(steps), height))
+    for n, level in enumerate(steps):
+        img_filtered = change_contrast(img, level)
+        canvas.paste(img_filtered, (width * n, 0))
+    return canvas
+
+def flattened_generator(generator):
+    for batch in generator:
+        yield (batch.reshape(-1,img_width*img_height*nb_channels),
+                batch.reshape(-1,img_width*img_height*nb_channels))
+
+def fixed_generator(generator):
+    for batch in generator:
+        yield (batch, batch)
+
+train_datagen = ImageDataGenerator(rescale=1./255)
+train_generator = train_datagen.flow_from_directory(img_dir_train,
+        target_size=(img_width, img_height), batch_size=_batch_size,
+        class_mode=None, shuffle=True)
+
+validation_datagen = ImageDataGenerator(rescale=1./255)
+validation_generator = validation_datagen.flow_from_directory(img_dir_validation,
+        target_size=(img_width, img_height), batch_size=_batch_size,
+        class_mode=None, shuffle=True)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+test_generator = train_datagen.flow_from_directory(img_dir_test,
+        target_size=(img_width, img_height), batch_size=_batch_size,
+        class_mode=None, shuffle=True)
+
 def AE_CNN():
     input_img = Input(shape=(img_width, img_height, 3))
     x = Conv2D(16, (3, 3), activation='relu', padding='same',
@@ -120,7 +129,10 @@ def AE_CNN():
 
     return Model(input_img, decoded)
 
-trained_model_name = '{}model_weights_ae_cnn_244.h5'.format(trained_models_dir)
+trained_model_name = ('{}model_weights_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC'
+        '.h5'.format(trained_models_dir, img_target_size, _epochs, _batch_size, 
+            nb_channels, enhanced_contrast))
+print(trained_model_name)
 checkpoint_cnn = ModelCheckpoint(filepath = trained_model_name,
         save_best_only=True,monitor="val_loss", mode="min" )
 history_cnn = History()
@@ -130,11 +142,11 @@ autoencoder_cnn.compile(optimizer='adam', loss='binary_crossentropy')
 print("AE_CNN Created & Compiled")
 
 before_training_time = time.time()
-
-#autoencoder_cnn.compile(optimizer='adam', loss='mse')
-autoencoder_cnn.fit(x_train, x_train, epochs=_epochs, batch_size=_batch_size,
-        validation_split=0.1,
-        verbose=0, callbacks=[history_cnn, checkpoint_cnn])
+autoencoder_cnn.fit_generator(fixed_generator(train_generator), 
+        steps_per_epoch=2000 // _batch_size,
+        epochs=_epochs, validation_data=fixed_generator(validation_generator),
+        validation_steps=800 // _batch_size,
+        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
 
 after_training_time = time.time()
 train_time = after_training_time - before_training_time
