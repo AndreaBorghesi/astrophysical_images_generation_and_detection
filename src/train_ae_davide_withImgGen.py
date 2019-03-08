@@ -53,6 +53,16 @@ nb_channels = 3
 enhanced_contrast = 0
 #enhanced_contrast = -10
 
+imgGen_class_mode = 'input'
+#imgGen_class_mode = None
+if imgGen_class_mode == None:
+    imgGen_class_mode_str = 'None'
+else:
+    imgGen_class_mode_str = 'input'
+
+#train_loss = 'binary_crossentropy'
+train_loss = 'mae'
+
 def change_contrast(img, level):
     factor = (259 * (level + 255)) / (255 * (259 - level))
     def contrast(c):
@@ -80,17 +90,24 @@ def fixed_generator(generator):
 train_datagen = ImageDataGenerator(rescale=1./255)
 train_generator = train_datagen.flow_from_directory(img_dir_train,
         target_size=(img_width, img_height), batch_size=_batch_size,
-        class_mode=None, shuffle=True)
+        class_mode=imgGen_class_mode, shuffle=True)
 
 validation_datagen = ImageDataGenerator(rescale=1./255)
 validation_generator = validation_datagen.flow_from_directory(img_dir_validation,
         target_size=(img_width, img_height), batch_size=_batch_size,
-        class_mode=None, shuffle=True)
+        class_mode=imgGen_class_mode, shuffle=True)
 
 test_datagen = ImageDataGenerator(rescale=1./255)
 test_generator = train_datagen.flow_from_directory(img_dir_test,
         target_size=(img_width, img_height), batch_size=_batch_size,
-        class_mode=None, shuffle=True)
+        class_mode=imgGen_class_mode, shuffle=True)
+
+model_weights = ('{}model_weights_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
+        '{}_{}.h5'.format(trained_models_dir, img_target_size, _epochs, 
+            _batch_size, nb_channels, enhanced_contrast, train_loss, 
+            imgGen_class_mode_str))
+print(model_weights)
+sys.exit()
 
 def AE_CNN():
     input_img = Input(shape=(img_width, img_height, 3))
@@ -129,15 +146,15 @@ def AE_CNN():
 
     return Model(input_img, decoded)
 
-trained_model_name = ('{}model_weights_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC'
-        '.h5'.format(trained_models_dir, img_target_size, _epochs, _batch_size, 
-            nb_channels, enhanced_contrast))
-print(trained_model_name)
-checkpoint_cnn = ModelCheckpoint(filepath = trained_model_name,
+model_weights = ('{}model_weights_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
+        '{}_{}.h5'.format(trained_models_dir, img_target_size, _epochs, 
+            _batch_size, nb_channels, enhanced_contrast, train_loss, 
+            imgGen_class_mode_str))
+checkpoint_cnn = ModelCheckpoint(filepath = model_weights,
         save_best_only=True,monitor="val_loss", mode="min" )
 history_cnn = History()
 autoencoder_cnn = AE_CNN()
-autoencoder_cnn.compile(optimizer='adam', loss='binary_crossentropy')
+autoencoder_cnn.compile(optimizer='adam', loss=train_loss)
 
 print("AE_CNN Created & Compiled")
 
@@ -151,3 +168,8 @@ autoencoder_cnn.fit_generator(fixed_generator(train_generator),
 after_training_time = time.time()
 train_time = after_training_time - before_training_time
 print("AE_CNN Trained (in {} s)".format(train_time))
+
+model_saved = ('{}model_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_{}_{}'
+        '.h5'.format(trained_models_dir, img_target_size, _epochs, _batch_size, 
+            nb_channels, enhanced_contrast, train_loss, imgGen_class_mode_str))
+autoencoder_cnn.save(model_saved)

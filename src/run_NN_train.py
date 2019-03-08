@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --gres=gpu:tesla:2         # GPUs requested
+#SBATCH --gres=gpu:tesla:1         # GPUs requested
 #SBATCH --partition=dvd_usr_prod   # partition selected
 #SBATCH --account=cin_powerdam_5    # account selected
 #SBATCH -N 1      # nodes requested
@@ -9,8 +9,8 @@
 #SBATCH --mem=100000  # memory in Mb
 # --open-mode=append
 # --open-mode=truncate
-#SBATCH -o outfile # send stdout to outfile
-#SBATCH -e errfile  # send stderr to errfile
+#SBATCH -o outfile_bce_input # send stdout to outfile
+#SBATCH -e errfile_bce_input  # send stderr to errfile
 #SBATCH -t 03:00:00  # time requested in hour:minute:second
 
 #python train_ae_davide.py
