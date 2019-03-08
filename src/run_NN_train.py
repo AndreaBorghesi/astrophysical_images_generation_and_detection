@@ -9,9 +9,8 @@
 #SBATCH --mem=100000  # memory in Mb
 # --open-mode=append
 # --open-mode=truncate
-#SBATCH -o outfile_bce_input # send stdout to outfile
-#SBATCH -e errfile_bce_input  # send stderr to errfile
+#SBATCH -o outfile_mae_input_1gpu # send stdout to outfile
+#SBATCH -e errfile_mae_input_1gpu  # send stderr to errfile
 #SBATCH -t 03:00:00  # time requested in hour:minute:second
 
-#python train_ae_davide.py
 python train_ae_davide_withImgGen.py

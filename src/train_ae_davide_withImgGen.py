@@ -62,6 +62,9 @@ else:
 
 #train_loss = 'binary_crossentropy'
 train_loss = 'mae'
+#train_loss = 'mean_squared_error'
+
+n_gpu = 1
 
 def change_contrast(img, level):
     factor = (259 * (level + 255)) / (255 * (259 - level))
@@ -102,13 +105,6 @@ test_generator = train_datagen.flow_from_directory(img_dir_test,
         target_size=(img_width, img_height), batch_size=_batch_size,
         class_mode=imgGen_class_mode, shuffle=True)
 
-model_weights = ('{}model_weights_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
-        '{}_{}.h5'.format(trained_models_dir, img_target_size, _epochs, 
-            _batch_size, nb_channels, enhanced_contrast, train_loss, 
-            imgGen_class_mode_str))
-print(model_weights)
-sys.exit()
-
 def AE_CNN():
     input_img = Input(shape=(img_width, img_height, 3))
     x = Conv2D(16, (3, 3), activation='relu', padding='same',
@@ -147,9 +143,9 @@ def AE_CNN():
     return Model(input_img, decoded)
 
 model_weights = ('{}model_weights_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
-        '{}_{}.h5'.format(trained_models_dir, img_target_size, _epochs, 
+        '{}_{}_{}.h5'.format(trained_models_dir, img_target_size, _epochs, 
             _batch_size, nb_channels, enhanced_contrast, train_loss, 
-            imgGen_class_mode_str))
+            imgGen_class_mode_str, n_gpu))
 checkpoint_cnn = ModelCheckpoint(filepath = model_weights,
         save_best_only=True,monitor="val_loss", mode="min" )
 history_cnn = History()
@@ -159,17 +155,25 @@ autoencoder_cnn.compile(optimizer='adam', loss=train_loss)
 print("AE_CNN Created & Compiled")
 
 before_training_time = time.time()
-autoencoder_cnn.fit_generator(fixed_generator(train_generator), 
-        steps_per_epoch=2000 // _batch_size,
-        epochs=_epochs, validation_data=fixed_generator(validation_generator),
-        validation_steps=800 // _batch_size,
-        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
+if imgGen_class_mode_str == 'input':
+    autoencoder_cnn.fit_generator(train_generator, 
+            steps_per_epoch=2000 // _batch_size,
+            epochs=_epochs, validation_data=validation_generator,
+            validation_steps=800 // _batch_size,
+            verbose=1, callbacks=[history_cnn, checkpoint_cnn])
+else:
+    autoencoder_cnn.fit_generator(fixed_generator(train_generator), 
+            steps_per_epoch=2000 // _batch_size,
+            epochs=_epochs, validation_data=fixed_generator(validation_generator),
+            validation_steps=800 // _batch_size,
+            verbose=1, callbacks=[history_cnn, checkpoint_cnn])
 
 after_training_time = time.time()
 train_time = after_training_time - before_training_time
 print("AE_CNN Trained (in {} s)".format(train_time))
 
-model_saved = ('{}model_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_{}_{}'
+model_saved = ('{}model_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_{}_{}_{}'
         '.h5'.format(trained_models_dir, img_target_size, _epochs, _batch_size, 
-            nb_channels, enhanced_contrast, train_loss, imgGen_class_mode_str))
+            nb_channels, enhanced_contrast, train_loss, imgGen_class_mode_str,
+            n_gpu))
 autoencoder_cnn.save(model_saved)
