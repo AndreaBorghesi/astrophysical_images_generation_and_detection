@@ -101,7 +101,7 @@ validation_generator = validation_datagen.flow_from_directory(img_dir_validation
         class_mode=imgGen_class_mode, shuffle=True)
 
 test_datagen = ImageDataGenerator(rescale=1./255)
-test_generator = train_datagen.flow_from_directory(img_dir_test,
+test_generator = test_datagen.flow_from_directory(img_dir_test,
         target_size=(img_width, img_height), batch_size=_batch_size,
         class_mode=imgGen_class_mode, shuffle=True)
 
