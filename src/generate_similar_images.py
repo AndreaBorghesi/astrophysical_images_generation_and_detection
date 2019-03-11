@@ -54,6 +54,7 @@ img_dir_test = base_dir + 'images_set_test/'
 #img_dir_train_small = base_dir + 'images_set_very_small/'
 #img_dir_valid = base_dir + 'images_set_validation_very_small/'
 #img_dir_train = img_dir_train_small
+trained_model_dir = base_dir + 'trained_models/'
 
 # TODO: make experiments with data augmentation for training set
 # https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html
@@ -66,6 +67,8 @@ img_target_size = 996
 
 enhanced_contrast = 0
 #enhanced_contrast = -10
+
+img_width, img_height = img_target_size, img_target_size
 
 def change_contrast(img, level):
     factor = (259 * (level + 255)) / (255 * (259 - level))
@@ -83,25 +86,25 @@ def change_contrast_multi(img, steps):
     return canvas
 
 # load training images
-train_images = []
-idx = 0
-for i in tqdm(os.listdir(img_dir_train)):
-    if idx == 30:
-        break
-    img_path = os.path.join(img_dir_train, i)
-    if enhanced_contrast != 0:
-        img_enhanced = change_contrast_multi(Image.open(img_path),
-                [enhanced_contrast])
-        img = image.img_to_array(img_enhanced)
-    else:
-        img = image.img_to_array(image.load_img(img_path,
-            target_size=(img_target_size, img_target_size)))
-    train_images.append(img)
-    idx += 1
-x_train = np.asarray(train_images)
-
-print(x_train.nbytes)
-sys.exit()
+#train_images = []
+#idx = 0
+#for i in tqdm(os.listdir(img_dir_train)):
+#    if idx == 30:
+#        break
+#    img_path = os.path.join(img_dir_train, i)
+#    if enhanced_contrast != 0:
+#        img_enhanced = change_contrast_multi(Image.open(img_path),
+#                [enhanced_contrast])
+#        img = image.img_to_array(img_enhanced)
+#    else:
+#        img = image.img_to_array(image.load_img(img_path,
+#            target_size=(img_target_size, img_target_size)))
+#    train_images.append(img)
+#    idx += 1
+#x_train = np.asarray(train_images)
+#
+#print(x_train.nbytes)
+#sys.exit()
 
 #validation_images = []
 #for i in tqdm(os.listdir(img_dir_valid)):
@@ -132,7 +135,7 @@ x_test = np.asarray(test_images)
 #sys.exit()
 
 #(x_train, _), (x_test, _) = mnist.load_data()
-x_train = x_train.astype('float32') / 255.
+#x_train = x_train.astype('float32') / 255.
 x_test = x_test.astype('float32') / 255.
 
 #x_train = np.reshape(x_train, (len(x_train), img_target_size, img_target_size,
@@ -153,76 +156,78 @@ x_test = x_test.astype('float32') / 255.
 #
 ##sys.exit()
 #
-img_width, img_height = img_target_size, img_target_size
 
-def AE_CNN():
-    input_img = Input(shape=(img_width, img_height, 3))
-    x = Conv2D(16, (3, 3), activation='relu', padding='same',
-            strides=2)(input_img)
-    x = MaxPooling2D((2,2), padding='same')(x)
-    x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-    x = MaxPooling2D((2, 2), padding='same')(x)
-    x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-    encoded = MaxPooling2D((2, 2), padding='same')(x)
-
-    x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
-    x = UpSampling2D((2, 2))(x)
-    x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-    x = UpSampling2D((2, 2))(x)
-    x = Conv2D(16, (3, 3), activation='relu')(x)
-    x = UpSampling2D((2, 2))(x)
-    if img_target_size >= 100:
-        x = Conv2D(16, (3, 3), activation='relu')(x)
-        x = UpSampling2D((2, 2))(x)
-    if img_target_size == 28:
-        x = Conv2D(16, (3, 3), activation='relu')(x)
-        x = UpSampling2D((3, 3))(x)
-        x = Conv2D(16, (3, 3), activation='relu')(x)
-        #x = UpSampling2D((2, 2))(x)
-
-    #decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same')(x)
-    decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
-
-    #x = Conv2D(16, (3, 3), activation='relu', padding='same',
-    #        strides=2)(input_img)
-    #x = Conv2D(32, (3, 3), activation='relu', padding='same', strides=2)(x)
-    #encoded = Conv2D(32, (2, 2), activation='relu', padding="same",
-    #        strides=2)(x)
-    #x = Conv2D(32, (2, 2), activation='relu', padding="same")(encoded)
-    #x = UpSampling2D((2, 2))(x)
-    #x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-    #x = UpSampling2D((2, 2))(x)
-    #x = Conv2D(16, (3, 3), activation='relu')(x)
-    #x = UpSampling2D((2, 2))(x)
-    #decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
-
-    return Model(input_img, decoded)
-
-checkpoint_cnn = ModelCheckpoint(filepath = "model_weights_ae_cnn.h5",
-        save_best_only=True,monitor="val_loss", mode="min" )
-history_cnn = History()
-autoencoder_cnn = AE_CNN()
-autoencoder_cnn.summary()
-autoencoder_cnn.compile(optimizer='adam', loss='binary_crossentropy')
-#autoencoder_cnn.compile(optimizer='adadelta', loss='mse')
-#autoencoder_cnn.fit_generator(fixed_generator(train_generator_cnn),
-#        samples_per_epoch=math.floor(41322 / _batch_size), nb_epoch=_epochs,
-#        validation_data=fixed_generator(validation_generator_cnn),
-#        nb_val_samples=math.floor(13877 / _batch_size),
+#def AE_CNN():
+#    input_img = Input(shape=(img_width, img_height, 3))
+#    x = Conv2D(16, (3, 3), activation='relu', padding='same',
+#            strides=2)(input_img)
+#    x = MaxPooling2D((2,2), padding='same')(x)
+#    x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+#    x = MaxPooling2D((2, 2), padding='same')(x)
+#    x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+#    encoded = MaxPooling2D((2, 2), padding='same')(x)
+#
+#    x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
+#    x = UpSampling2D((2, 2))(x)
+#    x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+#    x = UpSampling2D((2, 2))(x)
+#    x = Conv2D(16, (3, 3), activation='relu')(x)
+#    x = UpSampling2D((2, 2))(x)
+#    if img_target_size >= 100:
+#        x = Conv2D(16, (3, 3), activation='relu')(x)
+#        x = UpSampling2D((2, 2))(x)
+#    if img_target_size == 28:
+#        x = Conv2D(16, (3, 3), activation='relu')(x)
+#        x = UpSampling2D((3, 3))(x)
+#        x = Conv2D(16, (3, 3), activation='relu')(x)
+#        #x = UpSampling2D((2, 2))(x)
+#
+#    #decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same')(x)
+#    decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
+#
+#    #x = Conv2D(16, (3, 3), activation='relu', padding='same',
+#    #        strides=2)(input_img)
+#    #x = Conv2D(32, (3, 3), activation='relu', padding='same', strides=2)(x)
+#    #encoded = Conv2D(32, (2, 2), activation='relu', padding="same",
+#    #        strides=2)(x)
+#    #x = Conv2D(32, (2, 2), activation='relu', padding="same")(encoded)
+#    #x = UpSampling2D((2, 2))(x)
+#    #x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+#    #x = UpSampling2D((2, 2))(x)
+#    #x = Conv2D(16, (3, 3), activation='relu')(x)
+#    #x = UpSampling2D((2, 2))(x)
+#    #decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
+#
+#    return Model(input_img, decoded)
+#
+#checkpoint_cnn = ModelCheckpoint(filepath = "model_weights_ae_cnn.h5",
+#        save_best_only=True,monitor="val_loss", mode="min" )
+#history_cnn = History()
+#autoencoder_cnn = AE_CNN()
+#autoencoder_cnn.summary()
+#autoencoder_cnn.compile(optimizer='adam', loss='binary_crossentropy')
+##autoencoder_cnn.compile(optimizer='adadelta', loss='mse')
+##autoencoder_cnn.fit_generator(fixed_generator(train_generator_cnn),
+##        samples_per_epoch=math.floor(41322 / _batch_size), nb_epoch=_epochs,
+##        validation_data=fixed_generator(validation_generator_cnn),
+##        nb_val_samples=math.floor(13877 / _batch_size),
+##        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
+#
+##autoencoder = Model(input_img, decoded)
+##autoencoder_cnn.compile(optimizer='adam', loss='mse')
+##autoencoder.fit(x, x, epochs=_epochs, batch_size=_batch_size, callbacks=None )
+#
+#autoencoder_cnn.fit(x_train, x_train, epochs=_epochs, batch_size=_batch_size,
+##autoencoder_cnn.fit(x_train, x_train, epochs=5, batch_size=128,
+#        validation_split=0.1,
 #        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
 
-#autoencoder = Model(input_img, decoded)
-#autoencoder_cnn.compile(optimizer='adam', loss='mse')
-#autoencoder.fit(x, x, epochs=_epochs, batch_size=_batch_size, callbacks=None )
-
-autoencoder_cnn.fit(x_train, x_train, epochs=_epochs, batch_size=_batch_size,
-#autoencoder_cnn.fit(x_train, x_train, epochs=5, batch_size=128,
-        validation_split=0.1,
-        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
-
+model_to_load = (trained_model_dir +
+        'model_weights_ae_cnn_996imgSize_100ep_32bs_3nbch_0enhC.h5')
+autoencoder_cnn = load_model(model_to_load)
 decoded_imgs = autoencoder_cnn.predict(x_test)
 
-n = 10
+n = 15
 #plt.figure()
 plt.figure(figsize=(20, 4))
 for i in range(n):
