@@ -38,8 +38,8 @@ img_dir_validation = base_dir + 'img_generator/validation/'
 img_dir_test = base_dir + 'img_generator/test/'
 
 img_target_size = 996
-img_target_size = 244
-img_target_size = 512
+#img_target_size = 244
+#img_target_size = 512
 
 img_width, img_height = img_target_size, img_target_size
 nb_channels = 3
@@ -47,7 +47,7 @@ nb_channels = 3
 enhanced_contrast = 0
 #enhanced_contrast = -10
 
-_batch_size = 32
+_batch_size = 16
 _epochs = 100
 _latent_dim = 2
 _cnn = True
@@ -63,8 +63,8 @@ else:
     imgGen_class_mode_str = 'input'
 
 #train_loss = 'binary_crossentropy'
-train_loss = 'mae'
-#train_loss = 'mean_squared_error'
+#train_loss = 'mae'
+train_loss = 'mean_squared_error'
 
 n_gpu = 4
 
@@ -179,15 +179,19 @@ else:
         x = BatchNormalization()(x)
     x = Conv2D(16, (3, 3), activation='relu')(x)
     x = UpSampling2D((2, 2))(x)
-    if img_target_size >= 100:
-        x = Conv2D(16, (3, 3), activation='relu')(x)
-        x = UpSampling2D((2, 2))(x)
+    #if img_target_size >= 100:
+    #    x = Conv2D(16, (3, 3), activation='relu')(x)
+    #    x = UpSampling2D((2, 2))(x)
     if _bn:
         x = BatchNormalization()(x)
     outputs = Conv2D(3, (3, 3), activation='relu', padding='same')(x)
     decoder = Model(latent_inputs, outputs, name='decoder_cnn')
     outputs = decoder(encoder(inputs)[2])
     vae = Model(inputs, outputs, name='vae_cnn')
+
+    #encoder.summary()
+    #decoder.summary()
+    #vae.summary()
 
 def vae_loss(y_true, y_pred):
     recon = K.mean(K.square(y_pred - y_true))
