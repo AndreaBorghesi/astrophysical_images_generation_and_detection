@@ -44,27 +44,39 @@ import cv2
 from PIL import Image
 
 _batch_size = 32
-_epochs = 2
+_epochs = 100
 
 base_dir = '/home/b0rgh/collaborations_potential/'
 base_dir += 'mpasquato_AE_detection_astrophysics_images/'
 img_dir_train = base_dir + 'img_generator/train/'
 img_dir_validation = base_dir + 'img_generator/validation/'
 img_dir_test = base_dir + 'img_generator/test/'
-trained_model_dir = base_dir + 'trained_models/'
+trained_models_dir = base_dir + 'trained_models/'
+generated_imgs_dir = base_dir + 'generated_images/'
 
 # TODO: make experiments with data augmentation for training set
 # https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html
 
 #img_target_size = 204
-img_target_size = 100
+#img_target_size = 100
 img_target_size = 996
-img_target_size = 28
+#img_target_size = 28
 
 img_width, img_height = img_target_size, img_target_size
 nb_channels = 3
 
 enhanced_contrast = 0
+
+imgGen_class_mode = 'input'
+#imgGen_class_mode = None
+if imgGen_class_mode == None:
+    imgGen_class_mode_str = 'None'
+else:
+    imgGen_class_mode_str = 'input'
+#train_loss = 'binary_crossentropy'
+train_loss = 'mae'
+#train_loss = 'mean_squared_error'
+n_gpu = 1
 
 def change_contrast(img, level):
     factor = (259 * (level + 255)) / (255 * (259 - level))
@@ -148,62 +160,86 @@ def AE_CNN():
 
     return Model(input_img, decoded)
 
-checkpoint_cnn = ModelCheckpoint(filepath = "model_weights_ae_cnn.h5",
-        save_best_only=True,monitor="val_loss", mode="min" )
-history_cnn = History()
-autoencoder_cnn = AE_CNN()
-autoencoder_cnn.summary()
-autoencoder_cnn.compile(optimizer='adam', loss='binary_crossentropy')
-#autoencoder_cnn.compile(optimizer='adadelta', loss='mse')
-#autoencoder_cnn.fit_generator(fixed_generator(train_generator_cnn),
-#        samples_per_epoch=math.floor(41322 / _batch_size), nb_epoch=_epochs,
-#        validation_data=fixed_generator(validation_generator_cnn),
-#        nb_val_samples=math.floor(13877 / _batch_size),
+#checkpoint_cnn = ModelCheckpoint(filepath = "model_weights_ae_cnn.h5",
+#        save_best_only=True,monitor="val_loss", mode="min" )
+#history_cnn = History()
+#autoencoder_cnn = AE_CNN()
+#autoencoder_cnn.summary()
+#autoencoder_cnn.compile(optimizer='adam', loss='binary_crossentropy')
+##autoencoder_cnn.compile(optimizer='adadelta', loss='mse')
+##autoencoder_cnn.fit_generator(fixed_generator(train_generator_cnn),
+##        samples_per_epoch=math.floor(41322 / _batch_size), nb_epoch=_epochs,
+##        validation_data=fixed_generator(validation_generator_cnn),
+##        nb_val_samples=math.floor(13877 / _batch_size),
+##        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
+#
+##autoencoder = Model(input_img, decoded)
+##autoencoder_cnn.compile(optimizer='adam', loss='mse')
+##autoencoder.fit(x, x, epochs=_epochs, batch_size=_batch_size, callbacks=None )
+#
+##autoencoder_cnn.fit(x_train, x_train, epochs=_epochs, batch_size=_batch_size,
+###autoencoder_cnn.fit(x_train, x_train, epochs=5, batch_size=128,
+##        validation_split=0.1,
+##        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
+#
+#autoencoder_cnn.fit_generator(fixed_generator(train_generator), 
+#        steps_per_epoch=2000 // _batch_size,
+#        epochs=_epochs, validation_data=fixed_generator(validation_generator),
+#        validation_steps=800 // _batch_size,
 #        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
 
-#autoencoder = Model(input_img, decoded)
-#autoencoder_cnn.compile(optimizer='adam', loss='mse')
-#autoencoder.fit(x, x, epochs=_epochs, batch_size=_batch_size, callbacks=None )
-
-#autoencoder_cnn.fit(x_train, x_train, epochs=_epochs, batch_size=_batch_size,
-##autoencoder_cnn.fit(x_train, x_train, epochs=5, batch_size=128,
-#        validation_split=0.1,
-#        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
-
-autoencoder_cnn.fit_generator(fixed_generator(train_generator), 
-        steps_per_epoch=2000 // _batch_size,
-        epochs=_epochs, validation_data=fixed_generator(validation_generator),
-        validation_steps=800 // _batch_size,
-        verbose=1, callbacks=[history_cnn, checkpoint_cnn])
-
-model_to_load = (trained_model_dir +
-        'model_weights_ae_cnn_996imgSize_100ep_32bs_3nbch_0enhC.h5')
+model_to_load = ('{}model_weights_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
+        '{}_{}_{}.h5'.format(trained_models_dir, img_target_size, _epochs, 
+            _batch_size, nb_channels, enhanced_contrast, train_loss, 
+            imgGen_class_mode_str, n_gpu))
 autoencoder_cnn = load_model(model_to_load)
+print(model_to_load)
+autoencoder_cnn.summary()
 
 x_test = test_generator.next()
 decoded_imgs = autoencoder_cnn.predict(x_test)
 
-n = 10
-#plt.figure()
-plt.figure(figsize=(20, 4))
+#n = 10
+##plt.figure()
+#plt.figure(figsize=(20, 4))
+#for i in range(n):
+#    ax = plt.subplot(2, n, i+1)
+#    #reshaped_test = np.reshape(x_test[i], (img_target_size, img_target_size))
+#    #plt.imshow(reshaped_test)
+#    plt.imshow(x_test[i])
+#    plt.gray()
+#    ax.get_xaxis().set_visible(False)
+#    ax.get_yaxis().set_visible(False)
+#
+#    ax = plt.subplot(2, n, i + n+1)
+#    #reshaped_dec_img = np.reshape(decoded_imgs[i], 
+#    #        (img_target_size, img_target_size))
+#    #plt.imshow(reshaped_dec_img)
+#    plt.imshow(decoded_imgs[i])
+#    plt.gray()
+#    ax.get_xaxis().set_visible(False)
+#    ax.get_yaxis().set_visible(False)
+#plt.show()
+
+n = 45
 for i in range(n):
-    ax = plt.subplot(2, n, i+1)
-    #reshaped_test = np.reshape(x_test[i], (img_target_size, img_target_size))
-    #plt.imshow(reshaped_test)
+    print(i)
+    fig = plt.figure()
     plt.imshow(x_test[i])
-    plt.gray()
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+    fig_test = ('{}test_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
+        '{}_{}_{}_{}.png'.format(generated_imgs_dir, img_target_size, _epochs, 
+            _batch_size, nb_channels, enhanced_contrast, train_loss, 
+            imgGen_class_mode_str, n_gpu, i))
+    plt.savefig(fig_test)
+    plt.close(fig)
 
-    ax = plt.subplot(2, n, i + n+1)
-    #reshaped_dec_img = np.reshape(decoded_imgs[i], 
-    #        (img_target_size, img_target_size))
-    #plt.imshow(reshaped_dec_img)
+    fig = plt.figure()
     plt.imshow(decoded_imgs[i])
-    plt.gray()
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-
-plt.show()
+    fig_gen = ('{}gen_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
+        '{}_{}_{}_{}.png'.format(generated_imgs_dir, img_target_size, _epochs, 
+            _batch_size, nb_channels, enhanced_contrast, train_loss, 
+            imgGen_class_mode_str, n_gpu, i))
+    plt.savefig(fig_gen)
+    plt.close(fig)
 
 
