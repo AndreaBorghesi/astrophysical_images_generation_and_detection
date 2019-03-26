@@ -20,7 +20,7 @@ from keras.models import load_model, Sequential, Model
 from keras import backend as K 
 from keras import optimizers, initializers, regularizers
 from keras.layers import Convolution1D, Dense, MaxPooling1D, Flatten, Input
-from keras.layers import UpSampling1D, Lambda, Dropout, merge
+from keras.layers import UpSampling1D, Lambda, Dropout, merge, Reshape
 from keras.layers.normalization import BatchNormalization
 from keras.utils import plot_model
 from keras.wrappers.scikit_learn import KerasRegressor

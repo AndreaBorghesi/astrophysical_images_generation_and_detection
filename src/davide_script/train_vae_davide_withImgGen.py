@@ -20,7 +20,7 @@ from keras.models import load_model, Sequential, Model
 from keras import backend as K 
 from keras import optimizers, initializers, regularizers
 from keras.layers import Convolution1D, Dense, MaxPooling1D, Flatten, Input
-from keras.layers import UpSampling1D, Lambda, Dropout, merge
+from keras.layers import UpSampling1D, Lambda, Dropout, merge, Reshape
 from keras.layers.normalization import BatchNormalization
 from keras.utils import plot_model
 from keras.wrappers.scikit_learn import KerasRegressor
@@ -38,7 +38,8 @@ img_dir_validation = base_dir + 'img_generator/validation/'
 img_dir_test = base_dir + 'img_generator/test/'
 
 img_target_size = 996
-#img_target_size = 244
+img_target_size = 244
+img_target_size = 512
 
 img_width, img_height = img_target_size, img_target_size
 nb_channels = 3
@@ -52,6 +53,7 @@ _latent_dim = 2
 _cnn = True
 _vae_loss_kl_weight = 1
 _vae_loss_recon_weight = 1
+_bn = True
 
 imgGen_class_mode = 'input'
 #imgGen_class_mode = None
@@ -64,7 +66,7 @@ else:
 train_loss = 'mae'
 #train_loss = 'mean_squared_error'
 
-n_gpu = 1
+n_gpu = 4
 
 def change_contrast(img, level):
     factor = (259 * (level + 255)) / (255 * (259 - level))
@@ -141,8 +143,12 @@ else:
     x = Conv2D(16, (3, 3), activation='relu', padding='same',
             strides=2)(inputs)
     x = MaxPooling2D((2,2), padding='same')(x)
+    if _bn:
+        x = BatchNormalization()(x)
     x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
     x = MaxPooling2D((2, 2), padding='same')(x)
+    if _bn:
+        x = BatchNormalization()(x)
     x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
     encoded = MaxPooling2D((2, 2), padding='same')(x)
     shape = K.int_shape(x)
@@ -158,17 +164,26 @@ else:
 
     x = Dense(shape[1] * shape[2] * shape[3], activation='relu')(latent_inputs)
     x = Reshape((shape[1], shape[2], shape[3]))(x)
-
+    if _bn:
+        x = BatchNormalization()(x)
     x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
     x = UpSampling2D((2, 2))(x)
+    if _bn:
+        x = BatchNormalization()(x)
     x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+    if _bn:
+        x = BatchNormalization()(x)
     x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
     x = UpSampling2D((2, 2))(x)
+    if _bn:
+        x = BatchNormalization()(x)
     x = Conv2D(16, (3, 3), activation='relu')(x)
     x = UpSampling2D((2, 2))(x)
     if img_target_size >= 100:
         x = Conv2D(16, (3, 3), activation='relu')(x)
         x = UpSampling2D((2, 2))(x)
+    if _bn:
+        x = BatchNormalization()(x)
     outputs = Conv2D(3, (3, 3), activation='relu', padding='same')(x)
     decoder = Model(latent_inputs, outputs, name='decoder_cnn')
     outputs = decoder(encoder(inputs)[2])
@@ -185,9 +200,14 @@ if _cnn:
     cnn_str = '_cnn'
 else:
     cnn_str = ''
-model_weights = ('{}model_weights_vae{}_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
+if _bn:
+    bn_str = '_bn'
+else:
+    bn_str = ''
+
+model_weights = ('{}model_weights_vae{}{}_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
         '{}_{}_{}_{}zdim_{}recW_{}klW.h5'.format(trained_models_dir, cnn_str, 
-            img_target_size, _epochs, _batch_size, nb_channels, 
+            bn_str, img_target_size, _epochs, _batch_size, nb_channels, 
             enhanced_contrast, train_loss, imgGen_class_mode_str, n_gpu, 
             _latent_dim, _vae_loss_recon_weight, _vae_loss_kl_weight))
 
@@ -218,9 +238,9 @@ after_training_time = time.time()
 train_time = after_training_time - before_training_time
 print("VAE{} Trained (in {} s)".format(cnn_str, train_time))
 
-model_saved = ('{}model_ae_cnn_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_{}_{}_{}'
-        '_{}zdim_{}recW_{}klW.h5'.format(trained_models_dir, img_target_size, 
-            _epochs, _batch_size, nb_channels, enhanced_contrast, train_loss, 
-            imgGen_class_mode_str, n_gpu, _latent_dim, _vae_loss_recon_weight, 
-            _vae_loss_kl_weight))
+model_saved = ('{}model_vae{}{}_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_{}_{}_{}'
+        '_{}zdim_{}recW_{}klW.h5'.format(trained_models_dir, cnn_str, bn_tr, 
+            img_target_size, _epochs, _batch_size, nb_channels, 
+            enhanced_contrast, train_loss, imgGen_class_mode_str, n_gpu, 
+            _latent_dim, _vae_loss_recon_weight, _vae_loss_kl_weight))
 vae.save(model_saved)
