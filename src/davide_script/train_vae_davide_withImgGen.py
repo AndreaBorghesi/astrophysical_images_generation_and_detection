@@ -47,7 +47,7 @@ nb_channels = 3
 enhanced_contrast = 0
 #enhanced_contrast = -10
 
-_batch_size = 16
+_batch_size = 32
 _epochs = 100
 _latent_dim = 2
 _cnn = True
@@ -208,21 +208,27 @@ if _bn:
     bn_str = '_bn'
 else:
     bn_str = ''
+if train_loss == 'binary_crossentropy':
+    loss_str = 'bce'
+elif train_loss == 'mae':
+    loss_str = 'mae'
+elif train_loss == 'mean_squared_error':
+    loss_str = 'mse'
 
 model_weights = ('{}model_weights_vae{}{}_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
         '{}_{}_{}_{}zdim_{}recW_{}klW.h5'.format(trained_models_dir, cnn_str, 
             bn_str, img_target_size, _epochs, _batch_size, nb_channels, 
-            enhanced_contrast, train_loss, imgGen_class_mode_str, n_gpu, 
+            enhanced_contrast, loss_str, imgGen_class_mode_str, n_gpu, 
             _latent_dim, _vae_loss_recon_weight, _vae_loss_kl_weight))
 
-checkpoint = ModelCheckpoint(
-        filepath = "model_weights_vae{}.h5".format(cnn_str),
+checkpoint = ModelCheckpoint(filepath = model_weights,
         save_best_only=True,monitor="val_loss", mode="min" )
 history = History()
 
 vae.compile(optimizer='adam', loss=vae_loss)
 
 print("VAE{} Created & Compiled".format(cnn_str))
+print("\tModel saved weights file name {}".format(model_weights))
 
 before_training_time = time.time()
 if imgGen_class_mode_str == 'input':
