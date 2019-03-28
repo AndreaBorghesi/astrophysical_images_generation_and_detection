@@ -9,8 +9,8 @@
 #SBATCH --mem=100000  # memory in Mb
 # --open-mode=append
 # --open-mode=truncate
-#SBATCH -o logs/outfile_mse_input_4gpu_bn_996imgsize_32bs_2zdim
-#SBATCH -e logs/errfile_mse_input_4gpu_bn_996imgsize_32bs_2zdim
+#SBATCH -o logs/outfile_mse_input_4gpu_bn_996imgsize_32bs_100zdim
+#SBATCH -e logs/errfile_mse_input_4gpu_bn_996imgsize_32bs_100zdim
 #SBATCH -t 03:00:00  # time requested in hour:minute:second
 
 #python train_ae_davide_withImgGen.py

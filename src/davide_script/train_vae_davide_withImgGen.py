@@ -49,7 +49,7 @@ enhanced_contrast = 0
 
 _batch_size = 32
 _epochs = 100
-_latent_dim = 2
+_latent_dim = 100
 _cnn = True
 _vae_loss_kl_weight = 1
 _vae_loss_recon_weight = 1
@@ -215,17 +215,23 @@ elif train_loss == 'mae':
 elif train_loss == 'mean_squared_error':
     loss_str = 'mse'
 
+#model_weights = ('{}model_weights_vae{}{}_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
+#        '{}_{}_{}_{}zdim_{}recW_{}klW.h5'.format(trained_models_dir, cnn_str, 
+#            bn_str, img_target_size, _epochs, _batch_size, nb_channels, 
+#            enhanced_contrast, loss_str, imgGen_class_mode_str, n_gpu, 
+#            _latent_dim, _vae_loss_recon_weight, _vae_loss_kl_weight))
 model_weights = ('{}model_weights_vae{}{}_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
-        '{}_{}_{}_{}zdim_{}recW_{}klW.h5'.format(trained_models_dir, cnn_str, 
+        '{}_{}_{}_{}zdim_{}recW_{}klW.hdf5'.format(
+            trained_models_dir, cnn_str, 
             bn_str, img_target_size, _epochs, _batch_size, nb_channels, 
             enhanced_contrast, loss_str, imgGen_class_mode_str, n_gpu, 
             _latent_dim, _vae_loss_recon_weight, _vae_loss_kl_weight))
 
 checkpoint = ModelCheckpoint(filepath = model_weights,
-        save_best_only=True,monitor="val_loss", mode="min" )
+        save_best_only=True,monitor="loss", mode="min" )
 history = History()
 
-vae.compile(optimizer='adam', loss=vae_loss)
+vae.compile(optimizer='adam', loss=vae_loss, metrics=['val_loss'])
 
 print("VAE{} Created & Compiled".format(cnn_str))
 print("\tModel saved weights file name {}".format(model_weights))
@@ -251,6 +257,6 @@ print("VAE{} Trained (in {} s)".format(cnn_str, train_time))
 model_saved = ('{}model_vae{}{}_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_{}_{}_{}'
         '_{}zdim_{}recW_{}klW.h5'.format(trained_models_dir, cnn_str, bn_tr, 
             img_target_size, _epochs, _batch_size, nb_channels, 
-            enhanced_contrast, train_loss, imgGen_class_mode_str, n_gpu, 
+            enhanced_contrast, loss_str, imgGen_class_mode_str, n_gpu, 
             _latent_dim, _vae_loss_recon_weight, _vae_loss_kl_weight))
 vae.save(model_saved)
