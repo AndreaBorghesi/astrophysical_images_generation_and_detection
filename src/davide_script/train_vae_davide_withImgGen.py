@@ -220,7 +220,6 @@ elif train_loss == 'mean_squared_error':
 #            bn_str, img_target_size, _epochs, _batch_size, nb_channels, 
 #            enhanced_contrast, loss_str, imgGen_class_mode_str, n_gpu, 
 #            _latent_dim, _vae_loss_recon_weight, _vae_loss_kl_weight))
-
 model_weights = ('{}model_weights_vae{}{}_{}imgSize_{}ep_{}bs_{}nbch_{}enhC_'
         '{}_{}_{}_{}zdim_{}recW_{}klW.hdf5'.format(
             trained_models_dir, cnn_str, 
