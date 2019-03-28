@@ -57,7 +57,7 @@ trained_model_dir = base_dir + 'trained_models/'
 
 img_target_size = 100
 img_target_size = 996
-img_target_size = 28
+#img_target_size = 28
 
 img_width, img_height = img_target_size, img_target_size
 nb_channels = 3
@@ -234,41 +234,48 @@ checkpoint_vae = ModelCheckpoint(
         save_best_only=True,monitor="val_loss", mode="min" )
 history_vae = History()
 
-vae.compile(optimizer='adam', loss=vae_loss)
-vae.fit_generator(fixed_generator(train_generator), 
-        steps_per_epoch=2000 // _batch_size,
-        epochs=_epochs, validation_data=fixed_generator(validation_generator),
-        validation_steps=800 // _batch_size,
-        verbose=1, callbacks=[history_vae, checkpoint_vae])
+#vae.compile(optimizer='adam', loss=vae_loss)
+#vae.fit_generator(fixed_generator(train_generator), 
+#        steps_per_epoch=2000 // _batch_size,
+#        epochs=_epochs, validation_data=fixed_generator(validation_generator),
+#        validation_steps=800 // _batch_size,
+#        verbose=1, callbacks=[history_vae, checkpoint_vae])
 
 #model_to_load = (trained_model_dir +
-#        'model_weights_ae_cnn_996imgSize_100ep_32bs_3nbch_0enhC.h5')
-#autoencoder_cnn = load_model(model_to_load)
-#
-#x_test = test_generator.next()
-#decoded_imgs = autoencoder_cnn.predict(x_test)
-#
-#n = 10
-##plt.figure()
-#plt.figure(figsize=(20, 4))
-#for i in range(n):
-#    ax = plt.subplot(2, n, i+1)
-#    #reshaped_test = np.reshape(x_test[i], (img_target_size, img_target_size))
-#    #plt.imshow(reshaped_test)
-#    plt.imshow(x_test[i])
-#    plt.gray()
-#    ax.get_xaxis().set_visible(False)
-#    ax.get_yaxis().set_visible(False)
-#
-#    ax = plt.subplot(2, n, i + n+1)
-#    #reshaped_dec_img = np.reshape(decoded_imgs[i], 
-#    #        (img_target_size, img_target_size))
-#    #plt.imshow(reshaped_dec_img)
-#    plt.imshow(decoded_imgs[i])
-#    plt.gray()
-#    ax.get_xaxis().set_visible(False)
-#    ax.get_yaxis().set_visible(False)
-#
-#plt.show()
+#        'model_weights_vae_cnn_bn_996imgSize_100ep_32bs_3nbch_0enhC_mae_'
+#        'input_4_2zdim_1recW_1klW_CPY.h5')
+#model_to_load = (trained_model_dir + 'model_weights_vae_cnn_bn_996imgSize_'
+#        '100ep_32bs_3nbch_0enhC_mae_input_4_2zdim_1recW_1klW.h5')
+model_to_load = (trained_model_dir + 'model_weights_vae_cnn_bn_996imgSize_'
+        '100ep_32bs_3nbch_0enhC_mse_input_4_5zdim_1recW_1klW.h5')
+
+
+vae_cnn = load_model(model_to_load, custom_objects={'vae_loss': vae_loss})
+
+x_test = test_generator.next()
+decoded_imgs = vae_cnn.predict(x_test)
+
+n = 10
+#plt.figure()
+plt.figure(figsize=(20, 4))
+for i in range(n):
+    ax = plt.subplot(2, n, i+1)
+    #reshaped_test = np.reshape(x_test[i], (img_target_size, img_target_size))
+    #plt.imshow(reshaped_test)
+    plt.imshow(x_test[i])
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    ax = plt.subplot(2, n, i + n+1)
+    #reshaped_dec_img = np.reshape(decoded_imgs[i], 
+    #        (img_target_size, img_target_size))
+    #plt.imshow(reshaped_dec_img)
+    plt.imshow(decoded_imgs[i])
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+plt.show()
 
 
