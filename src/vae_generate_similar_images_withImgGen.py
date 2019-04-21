@@ -94,7 +94,7 @@ def fixed_generator(generator):
         yield (batch, batch)
 
 def sampling(args):
-    z_mean, z_log_var = args
+   z_mean, z_log_var = args
     batch = K.shape(z_mean)[0]
     dim = K.int_shape(z_mean)[1]
     epsilon = K.random_normal(shape=(batch, dim))
@@ -241,14 +241,8 @@ history_vae = History()
 #        validation_steps=800 // _batch_size,
 #        verbose=1, callbacks=[history_vae, checkpoint_vae])
 
-#model_to_load = (trained_model_dir +
-#        'model_weights_vae_cnn_bn_996imgSize_100ep_32bs_3nbch_0enhC_mae_'
-#        'input_4_2zdim_1recW_1klW_CPY.h5')
-#model_to_load = (trained_model_dir + 'model_weights_vae_cnn_bn_996imgSize_'
-#        '100ep_32bs_3nbch_0enhC_mae_input_4_2zdim_1recW_1klW.h5')
 model_to_load = (trained_model_dir + 'model_weights_vae_cnn_bn_996imgSize_'
-        '100ep_32bs_3nbch_0enhC_mse_input_4_5zdim_1recW_1klW.h5')
-
+    '100ep_32bs_3nbch_0enhC_input_4_50zdim_1recW_1klW.hdf5')
 
 vae_cnn = load_model(model_to_load, custom_objects={'vae_loss': vae_loss})
 
