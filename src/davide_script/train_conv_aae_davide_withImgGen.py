@@ -7,7 +7,7 @@ Given a train set of images (results of astrophysical simulations), attempt to
 generate images with similar distribution
 - use a image generator to load the train/test set
 - AE within generative adversarial approach
-- no convolution
+- with convolution
 '''
 
 #!/usr/bin/python
@@ -31,7 +31,7 @@ from keras.layers import UpSampling1D, Lambda, Dropout, merge, Reshape
 from keras.layers.normalization import BatchNormalization
 from keras.utils import plot_model
 from keras.wrappers.scikit_learn import KerasRegressor
-from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
+from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Activation
 from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing import image
 from keras.callbacks import ModelCheckpoint, History
@@ -39,7 +39,7 @@ from PIL import Image
 from keras.initializers import RandomNormal
 from sklearn.neighbors.kde import KernelDensity
 
-_batch_size = 1
+_batch_size = 32
 _epochs = 100
 _latent_dim = 2
 
@@ -111,38 +111,52 @@ class GAE():
         self.encoded_dim = encoded_dim
         self.optimizer_reconst = Adam(0.01)
         self.optimizer_discriminator = Adam(0.01)
-        #self.optimizer = Adam(0.001)
-        #self.optimizer_discriminator = Adam(0.00001)
         self._initAndCompileFullModel(img_shape, encoded_dim)
         self.img_shape = img_shape
 
     def _genEncoderModel(self, img_shape, encoded_dim):
         encoder = Sequential()
-        encoder.add(Flatten(input_shape=img_shape))
-        encoder.add(Dense(1000, activation='relu'))
-        encoder.add(Dense(1000, activation='relu'))
-        encoder.add(Dense(1000, activation='relu'))
+        encoder.add(Conv2D(16, (3, 3), activation='relu', padding='same',
+            strides=2),input_shape=img_shape)
+        encoder.add(MaxPooling2D((2,2), padding='same'))
+        encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2, 2), padding='same'))
+        encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2, 2), padding='same'))
+        encoder.add(Flatten())
         encoder.add(Dense(encoded_dim))
+        encoder.add(BatchNormalization())
+        encoder.add(Activation('tanh'))
         return encoder
 
     def _getDecoderModel(self, encoded_dim, img_shape):
         decoder = Sequential()
-        decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim))
-        decoder.add(Dense(1000, activation='relu'))
-        decoder.add(Dense(1000, activation='relu'))
-        decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
-        decoder.add(Reshape(img_shape))
+        encoder.add(Dense(8*3*3, input_dim=encoded_dim))
+        decoder.add(BatchNormalization())
+        decoder.add(Activation('tanh'))
+        decoder.add(Reshape((3, 3, 8), input_shape=(8*3*3,)))
+        decoder.add(UpSampling2D((2, 2)))
+        decoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        decoder.add(UpSampling2D((2, 2))(x)
+        decoder.add(Conv2D(16, (3, 3), activation='relu'))
+        decoder.add(UpSampling2D((2, 2)))
+        decoder.add(Conv2D(16, (3, 3), activation='relu'))
+        #decoder.add(UpSampling2D((2, 2)))
+        decoder.add(Activation('tanh'))
+        decoder.add(Conv2D(3, (3, 3), activation='sigmoid', padding='same'))
+        decoder.add(Activation('tanh'))
         return decoder
 
     def _getDescriminator(self, img_shape):
         discriminator = Sequential()
-        #discriminator.add(Flatten(input_shape=img_shape))
-        discriminator.add(Dense(1000, activation='relu',
-            kernel_initializer=initializer, bias_initializer=initializer))
-        discriminator.add(Dense(1000, activation='relu',
-            kernel_initializer=initializer, bias_initializer=initializer))
-        discriminator.add(Dense(1000, activation='relu',
-            kernel_initializer=initializer, bias_initializer=initializer))
+        discriminator.add(Conv2D(16, (3, 3), activation='relu', padding='same',
+            strides=2), input_shape=img_shape)
+        discriminator.add(MaxPooling2D((2,2), padding='same'))
+        discriminator.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        discriminator.add(MaxPooling2D((2, 2), padding='same'))
+        discriminator.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        discriminator.add(MaxPooling2D((2, 2), padding='same'))
+        discriminator.add(Flatten())
         discriminator.add(Dense(1, activation='sigmoid',
             kernel_initializer=initializer, bias_initializer=initializer))
         return discriminator
