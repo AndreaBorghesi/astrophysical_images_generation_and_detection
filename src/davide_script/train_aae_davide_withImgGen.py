@@ -41,7 +41,6 @@ from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
 from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing import image
 from keras.callbacks import ModelCheckpoint, History
-from tqdm import tqdm
 from keras.datasets import mnist
 import cv2
 from PIL import Image
