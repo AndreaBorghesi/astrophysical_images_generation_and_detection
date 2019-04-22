@@ -17,15 +17,9 @@ import sys
 import os
 import subprocess
 import matplotlib.pyplot as plt
-import matplotlib.pylab as pl
 from matplotlib import cm
-import pickle
-from pathlib import Path
-from matplotlib.colors import LogNorm
-from mpl_toolkits.mplot3d import Axes3D
 import math
 import time
-import pandas as pd 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 import tensorflow as tf
 from keras.models import load_model, Sequential, Model
@@ -41,13 +35,11 @@ from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
 from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing import image
 from keras.callbacks import ModelCheckpoint, History
-from keras.datasets import mnist
-import cv2
 from PIL import Image
 from keras.initializers import RandomNormal
 from sklearn.neighbors.kde import KernelDensity
 
-_batch_size = 32
+_batch_size = 1
 _epochs = 100
 _latent_dim = 2
 
@@ -128,7 +120,7 @@ class GAE():
         encoder = Sequential()
         print(img_shape)
         encoder.add(Flatten(input_shape=img_shape))
-        encoder.add(Dense(20000, activation='relu'))
+        encoder.add(Dense(1000, activation='relu'))
         encoder.add(Dense(1000, activation='relu'))
         encoder.add(Dense(1000, activation='relu'))
         encoder.add(Dense(encoded_dim))
@@ -137,8 +129,8 @@ class GAE():
 
     def _getDecoderModel(self, encoded_dim, img_shape):
         decoder = Sequential()
-        decoder.add(Dense(20000, activation='relu', input_dim=encoded_dim))
-        decoder.add(Dense(10000, activation='relu'))
+        decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim))
+        decoder.add(Dense(1000, activation='relu'))
         decoder.add(Dense(1000, activation='relu'))
         decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
         decoder.add(Reshape(img_shape))
@@ -147,9 +139,9 @@ class GAE():
     def _getDescriminator(self, img_shape):
         discriminator = Sequential()
         #discriminator.add(Flatten(input_shape=img_shape))
-        discriminator.add(Dense(20000, activation='relu',
+        discriminator.add(Dense(1000, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
-        discriminator.add(Dense(10000, activation='relu',
+        discriminator.add(Dense(1000, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
         discriminator.add(Dense(1000, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
