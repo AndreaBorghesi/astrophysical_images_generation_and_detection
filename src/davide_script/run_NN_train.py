@@ -15,4 +15,4 @@
 
 #python train_ae_davide_withImgGen.py
 #python train_vae_davide_withImgGen.py
-python train_aae_davide_withImgGen.py
+python train_conv_aae_davide_withImgGen.py

@@ -134,7 +134,7 @@ class GAE():
         decoder.add(Reshape(img_shape))
         return decoder
 
-    def _getDescriminator(self, img_shape):
+    def _getDiscriminator(self, img_shape):
         discriminator = Sequential()
         #discriminator.add(Flatten(input_shape=img_shape))
         discriminator.add(Dense(1000, activation='relu',
