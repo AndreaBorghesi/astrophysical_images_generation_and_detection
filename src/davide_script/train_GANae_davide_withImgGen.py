@@ -37,12 +37,15 @@ from keras.callbacks import ModelCheckpoint, History
 from PIL import Image
 from keras.initializers import RandomNormal
 from sklearn.neighbors.kde import KernelDensity
+import matplotlib.pyplot as plt
+from matplotlib import cm
 
 _batch_size = 32
-_epochs = 20
-_latent_dim = 20
+_epochs = 100
+_latent_dim = 18
 _cnn = False
 _bn = False
+_dense_layer_size = 70
 
 base_dir = '/davide/home/userexternal/aborghes/'
 base_dir += 'astrophysical_images_generation_and_detection/'
@@ -50,6 +53,7 @@ trained_models_dir = base_dir + 'trained_models/GAN/'
 img_dir_train = base_dir + 'img_generator/train/'
 img_dir_validation = base_dir + 'img_generator/validation/'
 img_dir_test = base_dir + 'img_generator/test/'
+aae_img_dir = base_dir + 'aae_generated_imgs/'
 
 #img_target_size = 100
 img_target_size = 996
@@ -139,18 +143,18 @@ class GAE():
         encoder = Sequential()
         #print(img_shape)
         encoder.add(Flatten(input_shape=img_shape))
-        encoder.add(Dense(1000, activation='relu'))
-        encoder.add(Dense(1000, activation='relu'))
-        encoder.add(Dense(1000, activation='relu'))
+        encoder.add(Dense(_dense_layer_size, activation='relu'))
+        encoder.add(Dense(_dense_layer_size, activation='relu'))
+        encoder.add(Dense(_dense_layer_size, activation='relu'))
         encoder.add(Dense(encoded_dim))
-        encoder.summary()
+        #encoder.summary()
         return encoder
 
     def _getDecoderModel(self, encoded_dim, img_shape):
         decoder = Sequential()
-        decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim))
-        decoder.add(Dense(1000, activation='relu'))
-        decoder.add(Dense(1000, activation='relu'))
+        decoder.add(Dense(_dense_layer_size, activation='relu', input_dim=encoded_dim))
+        decoder.add(Dense(_dense_layer_size, activation='relu'))
+        decoder.add(Dense(_dense_layer_size, activation='relu'))
         decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
         decoder.add(Reshape(img_shape))
         return decoder
@@ -158,11 +162,11 @@ class GAE():
     def _getDescriminator(self, img_shape):
         discriminator = Sequential()
         #discriminator.add(Flatten(input_shape=img_shape))
-        discriminator.add(Dense(1000, activation='relu',
+        discriminator.add(Dense(_dense_layer_size, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
-        discriminator.add(Dense(1000, activation='relu',
+        discriminator.add(Dense(_dense_layer_size, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
-        discriminator.add(Dense(1000, activation='relu',
+        discriminator.add(Dense(_dense_layer_size, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
         discriminator.add(Dense(1, activation='sigmoid',
             kernel_initializer=initializer, bias_initializer=initializer))
@@ -191,23 +195,27 @@ class GAE():
         self.encoder_discriminator.compile(optimizer=self.optimizer_discriminator,
                 loss='binary_crossentropy', metrics=['accuracy'])
 
-    #def imagegrid(self, epochnumber):
-    #    images = self.generateImages(10)
-    #    for index,img in enumerate(images):
-    #        fig = plt.figure(figsize=(img_target_size, img_target_size))
-    #        img = img.reshape((img_target_size, img_target_size, nb_channels))
-    #        ax = fig.add_subplot(1,1,1)
-    #        ax.set_axis_off()
-    #        #ax.imshow(img, cmap="gray")
-    #        ax.imshow(img)
-    #        fig.savefig("AAE_{}_{}.png".format(epochnumber, index))
-    #    #plt.show()
-    #        plt.close(fig)
+    def imagegrid(self, epochnumber):
+        images = self.generateImages(10)
+        for index,img in enumerate(images):
+            #print(img_target_size)
+            fig = plt.figure()
+            #fig = plt.figure(figsize=(img_target_size, img_target_size))
+            #fig = plt.figure(figsize=(img_target_size/1000, img_target_size/1000),
+            #        dpi=100)
+            img = img.reshape((img_target_size, img_target_size, nb_channels))
+            ax = fig.add_subplot(1,1,1)
+            ax.set_axis_off()
+            ax.imshow(img, cmap="gray")
+            fig.savefig("{}AAE_2_{}_{}.png".format(aae_img_dir, epochnumber, 
+                index))
+            #    index),dpi=1000)
+            plt.close(fig)
 
-    #def generateImages(self, n=10):
-    #     latents = 5*np.random.normal(size=(n, self.encoded_dim))
-    #     imgs = self.decoder.predict(latents)
-    #     return imgs
+    def generateImages(self, n=10):
+         latents = 5*np.random.normal(size=(n, self.encoded_dim))
+         imgs = self.decoder.predict(latents)
+         return imgs
 
     def train(self, x_train, batch_size=_batch_size, epochs=_epochs):
         print("--- Train ---")
@@ -220,6 +228,9 @@ class GAE():
                 self.encoded_dim))
             valid = np.ones((half_batch, 1))
             fake = np.zeros((half_batch, 1))
+            print("Epoch {}".format(epoch))
+            print("latent_fake len {}, fake len {}".format(
+                len(latent_fake), len(fake)))
             d_loss_real = self.discriminator.train_on_batch(latent_real, valid)
             d_loss_fake = self.discriminator.train_on_batch(latent_fake, fake)
             d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
@@ -258,13 +269,8 @@ class GAE():
             self.autoencoder.save(gan_ae_mdl)
             self.decoder.save(gan_dec_mdl)
             self.encoder_discriminator.save(enc_discr_mdl)
-
-            #if epoch % 10 == 0:
-            #    self.imagegrid(epoch)
-
-
-#model_to_load = (trained_model_dir + 'model_weights_gan_ae_bn_996imgSize_'
-#    '100ep_32bs_3nbch_0enhC_input_4_50zdim_1recW_1klW.hdf5')
+            if epoch % 10 == 0:
+                self.imagegrid(epoch)
 
 print("Going to create GAN AE..")
 ann = GAE(img_shape=(img_target_size,img_target_size, nb_channels), 
@@ -272,7 +278,8 @@ ann = GAE(img_shape=(img_target_size,img_target_size, nb_channels),
 print("GAN AE created and compiled")
 #x_train = flattened_generator(train_generator).next()
 x_train = train_generator.next()
+before_train = time.time()
 ann.train(x_train, epochs=_epochs)
-
-print("GAN AE fully trained")
+after_train = time.time()
+print("GAN AE fully trained in {0:.3f}".format(after_train - before_train))
 
