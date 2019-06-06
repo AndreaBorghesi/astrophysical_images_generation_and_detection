@@ -45,7 +45,7 @@ _epochs = 100
 _latent_dim = 18
 _cnn = False
 _bn = False
-_dense_layer_size = 70
+_dense_layer_size = 80
 
 base_dir = '/davide/home/userexternal/aborghes/'
 base_dir += 'astrophysical_images_generation_and_detection/'
@@ -57,6 +57,7 @@ aae_img_dir = base_dir + 'aae_generated_imgs/'
 
 #img_target_size = 100
 img_target_size = 996
+img_target_size = 1000
 
 img_width, img_height = img_target_size, img_target_size
 nb_channels = 3
@@ -198,6 +199,18 @@ class GAE():
         self.encoder_discriminator.compile(optimizer=self.optimizer_discriminator,
                 loss='binary_crossentropy', metrics=['accuracy'])
 
+        print("---- ENCODER ----")
+        self.encoder.summary()
+        print("---- DECCODER ----")
+        self.decoder.summary()
+        print("---- DISCR ----")
+        self.discriminator.summary()
+        print("---- ENCODER_DISCR ----")
+        self.encoder_discriminator.summary()
+        print("---- AUTOENCODER ----")
+        self.autoencoder.summary()
+        #sys.exit()
+
     def imagegrid(self, epochnumber):
         images = self.generateImages(10)
         for index,img in enumerate(images):
@@ -210,7 +223,7 @@ class GAE():
             ax = fig.add_subplot(1,1,1)
             ax.set_axis_off()
             ax.imshow(img, cmap="gray")
-            fig.savefig("{}AAE_2_{}_{}.png".format(aae_img_dir, epochnumber, 
+            fig.savefig("{}AAE_{}_{}.png".format(aae_img_dir, epochnumber, 
                 index))
             #    index),dpi=1000)
             plt.close(fig)

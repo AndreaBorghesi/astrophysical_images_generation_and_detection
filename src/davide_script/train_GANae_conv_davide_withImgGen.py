@@ -26,11 +26,12 @@ from keras import backend as K
 from keras.optimizers import Adam
 from keras import optimizers, initializers, regularizers
 from keras.layers import Convolution1D, Dense, MaxPooling1D, Flatten, Input
+from keras.layers import Cropping2D
 from keras.layers import UpSampling1D, Lambda, Dropout, merge, Reshape
 from keras.layers.normalization import BatchNormalization
 from keras.utils import plot_model
 from keras.wrappers.scikit_learn import KerasRegressor
-from keras.layers import Conv2D, MaxPooling2D, UpSampling2D
+from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Activation
 from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing import image
 from keras.callbacks import ModelCheckpoint, History
@@ -42,10 +43,10 @@ from matplotlib import cm
 
 _batch_size = 32
 _epochs = 100
-_latent_dim = 18
-_cnn = False
+_latent_dim = 200
+_cnn = True
 _bn = False
-_dense_layer_size = 200
+_dense_layer_size = 1000
 
 base_dir = '/davide/home/userexternal/aborghes/'
 base_dir += 'astrophysical_images_generation_and_detection/'
@@ -56,6 +57,7 @@ img_dir_test = base_dir + 'img_generator/test/'
 aae_img_dir = base_dir + 'aae_generated_imgs/'
 
 img_target_size = 996
+#img_target_size = 1000
 
 img_width, img_height = img_target_size, img_target_size
 nb_channels = 3
@@ -135,8 +137,8 @@ class GAE():
         self.optimizer_discriminator = Adam(0.01)
         self._initAndCompileFullModel(img_shape, encoded_dim)
         self.img_shape = img_shape
-
-    def _genEncoderModel(self, img_shape, encoded_dim):
+        
+    def _getEncoderModel(self, encoded_dim, img_shape):
         encoder = Sequential()
         #print(img_shape)
         encoder.add(Conv2D(16, (3, 3), activation='relu', padding='same',
@@ -146,31 +148,97 @@ class GAE():
         encoder.add(MaxPooling2D((2, 2), padding='same'))
         encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
         encoder.add(MaxPooling2D((2, 2), padding='same'))
+        encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2, 2), padding='same'))
+        encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2, 2), padding='same'))
         encoder.add(Flatten())
         encoder.add(Dense(encoded_dim))
         #encoder.summary()
         return encoder
 
+    def _getEncoderModel_2(self, encoded_dim, img_shape):
+        encoder = Sequential()
+        #print(img_shape)
+        #encoder.add(Conv2D(128, (3, 3), activation='relu', padding='same',
+        #    strides=2, input_shape=img_shape))
+        #encoder.add(MaxPooling2D((2,2), padding='same'))
+        #encoder.add(Conv2D(64, (3, 3), activation='relu', padding='same',
+        #    input_shape=img_shape))
+        #encoder.add(MaxPooling2D((2,2), padding='same'))
+        encoder.add(Conv2D(32, (3, 3), activation='relu', padding='same',
+            input_shape=img_shape))
+        encoder.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2,2), padding='same'))
+        encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2, 2), padding='same'))
+        encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2, 2), padding='same'))
+        encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2, 2), padding='same'))
+        encoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        encoder.add(MaxPooling2D((2, 2), padding='same'))
+        encoder.add(Flatten())
+        encoder.add(Dense(encoded_dim))
+        #encoder.summary()
+        return encoder
+
+    def _getDecoderModel_OLD_NOT_WORKING(self, encoded_dim, img_shape):
+        decoder = Sequential()
+        decoder.add(Dense(8*3*3, input_dim=encoded_dim))
+        decoder.add(BatchNormalization())
+        decoder.add(Activation('tanh'))
+        decoder.add(Reshape((3, 3, 8), input_shape=(8*3*3,)))
+        decoder.add(UpSampling2D((4, 4)))
+        decoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        decoder.add(UpSampling2D((3, 3)))
+        decoder.add(Conv2D(16, (3, 3), activation='relu'))
+        decoder.add(UpSampling2D((4, 4)))
+        decoder.add(Conv2D(16, (3, 3), activation='relu', strides=1))
+        decoder.add(UpSampling2D((4, 4)))
+        decoder.add(Conv2D(3, (3, 3), activation='relu', padding='same'))
+        decoder.add(UpSampling2D((2, 2)))
+        #decoder.add(Reshape(img_shape))
+        return decoder
+ 
     def _getDecoderModel(self, encoded_dim, img_shape):
         decoder = Sequential()
         decoder.add(Dense(8*3*3, input_dim=encoded_dim))
         decoder.add(BatchNormalization())
         decoder.add(Activation('tanh'))
         decoder.add(Reshape((3, 3, 8), input_shape=(8*3*3,)))
-        decoder.add(UpSampling2D((2, 2)))
-        decoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
-        decoder.add(UpSampling2D((2, 2)))
-        decoder.add(Conv2D(16, (3, 3), activation='relu'))
-        decoder.add(UpSampling2D((2, 2)))
-        decoder.add(Conv2D(16, (3, 3), activation='relu'))
-        decoder.add(UpSampling2D((2, 2)))
+        decoder.add(UpSampling2D((4, 4)))
+        decoder.add(Conv2D(8, (6, 6), activation='relu', padding='same'))
+        decoder.add(UpSampling2D((3, 3)))
+        decoder.add(Conv2D(16, (5, 5), activation='relu'))
+        decoder.add(UpSampling2D((4, 4)))
+        decoder.add(Conv2D(16, (4, 4), activation='relu', strides=1))
+        decoder.add(UpSampling2D((4, 4)))
         decoder.add(Conv2D(3, (3, 3), activation='relu', padding='same'))
+        decoder.add(Cropping2D(cropping=1))
+        decoder.add(UpSampling2D((2, 2)))
         return decoder
+    
+    def _getDiscriminator2(self, encoded_dim, img_shape):
+        discriminator = Sequential()
+        discriminator.add(Conv2D(16, (3, 3), activation='relu', padding='same',
+            strides=2, input_shape=img_shape))
+        discriminator.add(MaxPooling2D((2,2), padding='same'))
+        discriminator.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        discriminator.add(MaxPooling2D((2, 2), padding='same'))
+        discriminator.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
+        discriminator.add(MaxPooling2D((2, 2), padding='same'))
+        discriminator.add(Flatten())
+        discriminator.add(Dense(1, activation='sigmoid',
+            kernel_initializer=initializer, bias_initializer=initializer))
+        return discriminator
 
-    def _getDiscriminator(self, encoded_d, img_shape):
+    def _getDiscriminator(self, encoded_dim, img_shape):
         discriminator = Sequential()
         discriminator.add(Dense(_dense_layer_size,
             activation='relu', input_dim=encoded_dim, 
+            kernel_initializer=initializer, bias_initializer=initializer))
+        discriminator.add(Dense(_dense_layer_size, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
         discriminator.add(Dense(_dense_layer_size, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
@@ -182,7 +250,7 @@ class GAE():
 
     def _initAndCompileFullModel(self, img_shape, encoded_dim):
         print("_initAndCompileFullModel")
-        self.encoder = self._genEncoderModel(encoded_dim, img_shape)
+        self.encoder = self._getEncoderModel(encoded_dim, img_shape)
         self.decoder = self._getDecoderModel(encoded_dim, img_shape)
         self.discriminator = self._getDiscriminator(encoded_dim, img_shape)
         img = Input(shape=img_shape)
@@ -203,14 +271,26 @@ class GAE():
                 optimizer=self.optimizer_discriminator,
                 loss='binary_crossentropy', metrics=['accuracy'])
 
+        print("---- ENCODER ----")
+        self.encoder.summary()
+        print("---- DECCODER ----")
+        self.decoder.summary()
+        print("---- DISCR ----")
+        self.discriminator.summary()
+        print("---- ENCODER_DISCR ----")
+        self.encoder_discriminator.summary()
+        print("---- AUTOENCODER ----")
+        self.autoencoder.summary()
+        #sys.exit()
+
     def imagegrid(self, epochnumber):
-        images = self.generateImages(10)
+        images = self.generateImages(15)
         for index,img in enumerate(images):
             #print(img_target_size)
             fig = plt.figure()
             #fig = plt.figure(figsize=(img_target_size, img_target_size))
-            #fig = plt.figure(figsize=(img_target_size/1000, img_target_size/1000),
-            #        dpi=100)
+            fig = plt.figure(figsize=(img_target_size/1000, img_target_size/1000),
+                    dpi=100)
             img = img.reshape((img_target_size, img_target_size, nb_channels))
             ax = fig.add_subplot(1,1,1)
             ax.set_axis_off()
@@ -277,7 +357,7 @@ class GAE():
             self.autoencoder.save(gan_ae_mdl)
             self.decoder.save(gan_dec_mdl)
             self.encoder_discriminator.save(enc_discr_mdl)
-            if epoch % 10 == 0:
+            if epoch % 5 == 0:
                 self.imagegrid(epoch)
 
 print("Going to create GAN AE..")

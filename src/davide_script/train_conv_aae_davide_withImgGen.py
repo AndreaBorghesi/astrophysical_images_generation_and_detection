@@ -133,8 +133,8 @@ class GAE():
     def _getDecoderModel(self, encoded_dim, img_shape):
         decoder = Sequential()
         decoder.add(Dense(8*3*3, input_dim=encoded_dim))
-        decoder.add(BatchNormalization())
-        decoder.add(Activation('tanh'))
+        #decoder.add(BatchNormalization())
+        #decoder.add(Activation('tanh'))
         decoder.add(Reshape((3, 3, 8), input_shape=(8*3*3,)))
         decoder.add(UpSampling2D((2, 2)))
         decoder.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
@@ -194,6 +194,17 @@ class GAE():
         #        loss='binary_crossentropy', metrics=['accuracy'])
         self.encoder_discriminator.compile(optimizer=self.optimizer_discriminator,
                 loss='binary_crossentropy', metrics=['accuracy'])
+
+        print("---- ENCODER ----")
+        self.encoder.summary()
+        print("---- DECCODER ----")
+        self.decoder.summary()
+        print("---- DISCR ----")
+        self.discriminator.summary()
+        print("---- ENCODER_DISCR ----")
+        self.encoder_discriminator.summary()
+        print("---- AUTOENCODER ----")
+        self.autoencoder.summary()
 
     def imagegrid(self, epochnumber):
         images = self.generateImages(10)
