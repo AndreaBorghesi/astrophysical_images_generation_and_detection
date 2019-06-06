@@ -139,7 +139,7 @@ class GAE():
         self._initAndCompileFullModel(img_shape, encoded_dim)
         self.img_shape = img_shape
 
-    def _genEncoderModel(self, img_shape, encoded_dim):
+    def _genEncoderModel(self, encoded_dim, img_shape):
         encoder = Sequential()
         #print(img_shape)
         encoder.add(Flatten(input_shape=img_shape))
@@ -152,18 +152,22 @@ class GAE():
 
     def _getDecoderModel(self, encoded_dim, img_shape):
         decoder = Sequential()
-        decoder.add(Dense(_dense_layer_size, activation='relu', input_dim=encoded_dim))
+        decoder.add(Dense(_dense_layer_size, activation='relu', 
+            input_dim=encoded_dim))
         decoder.add(Dense(_dense_layer_size, activation='relu'))
         decoder.add(Dense(_dense_layer_size, activation='relu'))
         decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
         decoder.add(Reshape(img_shape))
         return decoder
 
-    def _getDescriminator(self, img_shape):
+    def _getDiscriminator(self, encoded_dim, img_shape):
         discriminator = Sequential()
         #discriminator.add(Flatten(input_shape=img_shape))
-        discriminator.add(Dense(_dense_layer_size, activation='relu',
-            kernel_initializer=initializer, bias_initializer=initializer))
+        #discriminator.add(Dense(_dense_layer_size, activation='relu', 
+        #    kernel_initializer=initializer, bias_initializer=initializer))
+        discriminator.add(Dense(_dense_layer_size, activation='relu', 
+            input_dim=encoded_dim, kernel_initializer=initializer, 
+            bias_initializer=initializer))
         discriminator.add(Dense(_dense_layer_size, activation='relu',
             kernel_initializer=initializer, bias_initializer=initializer))
         discriminator.add(Dense(_dense_layer_size, activation='relu',
@@ -174,10 +178,9 @@ class GAE():
 
     def _initAndCompileFullModel(self, img_shape, encoded_dim):
         print("_initAndCompileFullModel")
-        self.encoder = self._genEncoderModel(img_shape, encoded_dim)
+        self.encoder = self._genEncoderModel(encoded_dim, img_shape)
         self.decoder = self._getDecoderModel(encoded_dim, img_shape)
-        self.discriminator = self._getDescriminator(img_shape)
-        self.discriminator = self._getDescriminator(encoded_dim)
+        self.discriminator = self._getDiscriminator(encoded_dim, img_shape)
         img = Input(shape=img_shape)
         encoded_repr = self.encoder(img)
         gen_img = self.decoder(encoded_repr)
