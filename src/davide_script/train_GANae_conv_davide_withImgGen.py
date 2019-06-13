@@ -233,7 +233,7 @@ class GAE():
         #decoder.add(Reshape(img_shape))
         return decoder
  
-    def _getDecoderModel2(self, encoded_dim, img_shape):
+    def _getDecoderModel(self, encoded_dim, img_shape):
         decoder = Sequential()
         decoder.add(Dense(8*3*3, input_dim=encoded_dim))
         decoder.add(BatchNormalization())
@@ -392,6 +392,19 @@ class GAE():
         #        epochnumber, index))
         #    plt.close(fig)
 
+    def plot_imgs(self, epochnumber, imgs):
+        for index,img in enumerate(imgs):
+            fig = plt.figure()
+            img = img.reshape((img_target_size, img_target_size, nb_channels))
+            img -= img.min()
+            img /= img.max()
+            ax = fig.add_subplot(1,1,1)
+            ax.set_axis_off()
+            ax.imshow(img, cmap="gray",vmin=0,vmax=255)
+            fig.savefig("{}trainImg_{}_{}.png".format(aae_img_dir, 
+                epochnumber, index))
+            plt.close(fig)
+
     def generateImages(self, n=10):
          latents = 5*np.random.normal(size=(n, self.encoded_dim))
          #latents = np.random.normal(size=(n, self.encoded_dim))
@@ -405,6 +418,10 @@ class GAE():
         for epoch in range(epochs):
             idx = np.random.randint(0, x_train.shape[0], half_batch)
             imgs = x_train[idx]
+
+            # test training set images
+            #self.plot_imgs(epoch, imgs)
+
             latent_fake = self.encoder.predict(imgs)
             latent_real = 5*np.random.normal(size=(half_batch,
                 self.encoded_dim))
