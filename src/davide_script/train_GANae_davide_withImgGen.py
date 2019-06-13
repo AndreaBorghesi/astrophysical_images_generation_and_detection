@@ -133,10 +133,10 @@ class GAE():
     def __init__(self, img_shape=(img_target_size,img_target_size,nb_channels), 
             encoded_dim=_latent_dim):
         self.encoded_dim = encoded_dim
-        self.optimizer_reconst = Adam(0.01)
-        self.optimizer_discriminator = Adam(0.01)
-        #self.optimizer = Adam(0.001)
-        #self.optimizer_discriminator = Adam(0.00001)
+        #self.optimizer_reconst = Adam(0.01)
+        #self.optimizer_discriminator = Adam(0.01)
+        self.optimizer = Adam(0.001)
+        self.optimizer_discriminator = Adam(0.00001)
         self._initAndCompileFullModel(img_shape, encoded_dim)
         self.img_shape = img_shape
 
