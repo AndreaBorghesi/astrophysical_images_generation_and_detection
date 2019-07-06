@@ -161,6 +161,9 @@ if imgGen_class_mode_str == 'input':
             epochs=_epochs, validation_data=validation_generator,
             validation_steps=800 // _batch_size,
             verbose=1, callbacks=[history_cnn, checkpoint_cnn])
+            :q
+            :wq
+            logout
 else:
     autoencoder_cnn.fit_generator(fixed_generator(train_generator), 
             steps_per_epoch=2000 // _batch_size,
